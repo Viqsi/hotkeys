@@ -22,11 +22,9 @@ HomeDir := EnvGet("USERPROFILE")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Window Position Management ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Keep NSNetMon and FB2K titlebar on top of the taskbar
-; Uses WinMoveTop because they're *already* always-on-top, but so is the taskbar
+; Keep NSNetMon on top of the taskbar (but not anything *covering* the taskbar)
+; Uses WinMoveTop because it's *already* always-on-top, but so is the taskbar
 GroupAdd("OverTaskbar", "NSnetmon ahk_class NSnetmon ahk_exe netmon.exe")
-;GroupAdd("OverTaskbar", "dotnet_title_bar ahk_exe foobar2000.exe")
-;GroupAdd("OverTaskbar", "Audacious ahk_exe audacious.exe")
 rise_above_taskbar() {
     If IsWindowNotOverlapped(WinExist('ahk_class Shell_TrayWnd')) {
         TargetWindows := WinGetList("ahk_group OverTaskbar")
@@ -66,11 +64,13 @@ IsWindowNotOverlapped(hWnd) {
 ; NOTE: Actual window title for Steam is 'notificationtoasts_107_desktop' but
 ; that '107' makes me wary that it might change with future revisions, so I've
 ; gone with a truncated version.
-;GroupAdd("TopNotif", "New notification ahk_class Windows.UI.Core.CoreWindow")
+GroupAdd("TopNotif", "New notification ahk_class Windows.UI.Core.CoreWindow")
+        ; Notifications
 GroupAdd("TopNotif", "ahk_class XamlExplorerHostIslandWindow")
+        ; Desktop indicator popups
 GroupAdd("TopNotif",
         "notificationtoasts ahk_class SDL_app ahk_exe steamwebhelper.exe")
-;GroupAdd("TopNotif", "Microsoft Teams Notification")
+        ; Steam notifications
 flip_to_top() {
     TargetWindows := WinGetList("ahk_group TopNotif")
     For TargetWindow In TargetWindows {
