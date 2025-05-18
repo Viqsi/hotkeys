@@ -75,7 +75,7 @@ flip_to_top() {
     TargetWindows := WinGetList("ahk_group TopNotif")
     For TargetWindow In TargetWindows {
         WinGetPos(, &OrigY,, &Height, TargetWindow)
-        If ((OrigY > (A_ScreenHeight / 2)) && (Height != 86)) {
+        If ((OrigY > (A_ScreenHeight / 2)) && (Height > 100)) {
             ; 53 is the height of a not-yet-opened new notification; this is a
             ; bug workaround. (Changed to 86 when I moved to higher res)
             ; 50 is the Officially Determined Height of a taskbar in Win11;
@@ -90,6 +90,15 @@ flip_to_top() {
 WindowsManage() {
     flip_to_top()
     rise_above_taskbar()
+    
+    ; The below is a quick-and-dirty way of fixing positioning issues with the
+    ; Notification Center (it'll sometimes appear entirely offscreen)
+    ; I suspect StartAllBack is responsible but can't be certain.
+    NotifCenter := WinExist("Notification Center ahk_class Windows.UI.Core.CoreWindow")
+    If NotifCenter {
+        WinGetPos(,, &NotWidth,, NotifCenter)
+        WinMove(Abs(A_ScreenWidth - NotWidth),80,,, NotifCenter)
+    }
 }
 SetTimer(WindowsManage, 10)
 
@@ -212,8 +221,8 @@ terminal_invoke(termlaunchmode) {
         Case "gitbash": Run("wt -p `"Git Bash`"", HomeDir)
     }
 }
-F11::terminal_invoke("tmux")
-+F11::terminal_invoke("bash")
+F11::terminal_invoke("gitbash")
++F11::terminal_invoke("tmux")
 ^+F11::terminal_invoke("reattach")
 ^F11::terminal_invoke("pwsh")
 ^#F11::terminal_invoke("cmd")
@@ -486,7 +495,7 @@ ExplicitResize() {
 ; should be temporarily suspended.
 ; This got turned into a class because, frankly, I was rapidly ending up with
 ; too many globals. And I needed something to track the state of our state (so
-; now it's even got a GUI!)
+; now it's even got a 'GUI'!)
 ;
 ; States are:
 ; * HoldingRMB: We want the RMB (Right Mouse Button) to be held down.
@@ -524,7 +533,7 @@ class RobloxHoldRMB {
         OSDGui.Add("Text", "x+10 y0 cWhite backgroundRed vRMBChat", "Chat")
         OSDGui.Add("Text", "x+10 y0 cWhite backgroundBlue vRMBCount",
                 this.ButtonCount)
-        OSDGui.Show("x500 y26")
+        OSDGui.Show("x500 y80")
         return OSDGui
     }
     
@@ -646,11 +655,14 @@ RBHRMB_Exit() {
 ~v::RBHRMB().RMBRefresh()   ; first/third person switch
 ~b::RBHRMB().RMBForceOff()  ; backpack window
 ~m::RBHRMB().RMBForceOff()  ; map window
+~Tab::RBHRMB().RMBForceOff()  ; all-around window
 ~t::RBHRMB().RMBForceOff()  ; character customization window
 ~h::RBHRMB().RMBForceOff()  ; Pick A Horse window
+~k::RBHRMB().RMBForceOff()  ; Skills window
+~l::RBHRMB().RMBForceOff()  ; Quests window
 ~p::RBHRMB().RMBRefresh()   ; Friendly/Hostile toggle
-~e::RBHRMB().RMBRefresh()   ; primary use/action
-~f::RBHRMB().RMBRefresh()   ; secondary use/action
+~e Up::RBHRMB().RMBRefresh()   ; primary use/action
+~f Up::RBHRMB().RMBRefresh()   ; secondary use/action
         ; The above two are complicated because they don't always pop up a UX
         ; dialog. When they *do* (talking to shopkeepers, opening a chest, et
         ; cetera) we'd prefer ForceOff, and when they *don't* (picking up a
@@ -659,6 +671,8 @@ RBHRMB_Exit() {
         ; for detecting such states for anticheat reasons.
         ; So I'm opting to just leave them alone and do any switching manually.
         ; CORRECTION: I'm having it refresh, and turning things off manually.
+        ; CORRECTION 2: Having them only refresh on keyup (not down) because
+        ; otherwise some robbery-related actions Don't Work.
 ~/::RBHRMB().RMBChatSwitch(True)    ; send a message
 ~Esc::{ ; EITHER Roblox menu OR cancel chat
     ; forceoff first as it'll work outside of chat mode
