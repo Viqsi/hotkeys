@@ -21,7 +21,8 @@
 ;
 ; States are:
 ; * HoldingRMB: We want the RMB (Right Mouse Button) to be held down.
-; * ChatMode: Halt *all* processing of RMB holds because we are inputting text.
+; * SuspMode: Halt *all* processing of RMB holds (frequently because we're
+;   inputting text, but also used for one or two other things)..
 ; I used to also have a SuspendingHold for temporarily suspending Hold whether
 ; it was on or off and then resume afterwards, but backing out of Suspend Mode
 ; could be done with multiple different possible inputs and it proved to be too
@@ -37,7 +38,7 @@ class RobloxHoldRMB {
     __new(DestWindow) {
         this.DestWindow := DestWindow
         this.HoldingRMB := False
-        this.ChatMode := False
+        this.SuspMode := False
         this.ButtonCount := 0
         this.OSDGui := this._OSDCreateGui()
         ; figure center of screen
@@ -52,7 +53,7 @@ class RobloxHoldRMB {
         OSDGui.MarginX := 0
         OSDGui.MarginY := 0
         OSDGui.Add("Text", "x0 y0 cWhite backgroundRed vRMBHeld", "Hold")
-        OSDGui.Add("Text", "x+10 y0 cWhite backgroundRed vRMBChat", "Chat")
+        OSDGui.Add("Text", "x+10 y0 cWhite backgroundRed vRMBSusp", "Susp")
         OSDGui.Add("Text", "x+10 y0 cWhite backgroundBlue vRMBCount",
                 this.ButtonCount)
         OSDGui.Show("x500 y80")
@@ -71,7 +72,7 @@ class RobloxHoldRMB {
         WinActivate(this.DestWindow)
         If (updown = "D") {
             If (WinActive(this.DestWindow)) {
-                Send("{RButton down}")
+                Send("{RButton DownR}")
                 this.ButtonCount += 1
             }
         } Else {
@@ -105,26 +106,26 @@ class RobloxHoldRMB {
     RMBRefresh() {
         ; Refresh RMB hold state after Roblox throws it away.
         this._Reconcile()
-        if (!this.ChatMode and this.HoldingRMB) {
+        if (!this.SuspMode and this.HoldingRMB) {
             this._CenterMouse()
             ;Sleep(200)
             ;this._SendClick("D")
-            Loop(3) {
+            Loop(2) {
                 this._SendClick("D")
                 Sleep 100
             }
         }
     }
     
-    RMBChatSwitch(mode) {
-        this.ChatMode := mode
-        this._UpdateGui("RMBChat", this.ChatMode)
+    RMBSuspSwitch(mode) {
+        this.SuspMode := mode
+        this._UpdateGui("RMBSusp", this.SuspMode)
         this.RMBRefresh()
     }
     
     RMBForceOff() {
         ; only needs to fire if we're already on
-        if (!this.ChatMode and this.HoldingRMB) {
+        if (!this.SuspMode and this.HoldingRMB) {
             this.HoldingRMB := False
             this._UpdateGui("RMBHeld", this.HoldingRMB)
             this.RMBRefresh()
@@ -132,7 +133,7 @@ class RobloxHoldRMB {
     }
     
     RMBToggle() {
-        if (!this.ChatMode) {
+        if (!this.SuspMode) {
             this.HoldingRMB := !this.HoldingRMB
             this._UpdateGui("RMBHeld", this.HoldingRMB)
             this.RMBRefresh()
@@ -166,25 +167,27 @@ RBHRMB_Exit() {
 #HotIf WinActive("ahk_exe RobloxPlayerBeta.exe")
 ;#HotIf WinActive("ahk_exe KeyTest.exe")
 ; Currently set up for controls for The Wild West.
-~1::RBHRMB().RMBRefresh()   ; hotbar weapons and tools
-~2::RBHRMB().RMBRefresh()
-~3::RBHRMB().RMBRefresh()
-~4::RBHRMB().RMBRefresh()
-~5::RBHRMB().RMBRefresh()
-~6::RBHRMB().RMBRefresh()
-~7::RBHRMB().RMBForceOff()  ; for sheriff baton
-~8::RBHRMB().RMBForceOff()  ; for sheriff cuffs
-~v::RBHRMB().RMBRefresh()   ; first/third person switch
-~b::RBHRMB().RMBForceOff()  ; backpack window
-~m::RBHRMB().RMBForceOff()  ; map window
-~Tab::RBHRMB().RMBForceOff()  ; all-around window
-~t::RBHRMB().RMBForceOff()  ; character customization window
-~h::RBHRMB().RMBForceOff()  ; Pick A Horse window
-~k::RBHRMB().RMBForceOff()  ; Skills window
-~l::RBHRMB().RMBForceOff()  ; Quests window
-~p::RBHRMB().RMBRefresh()   ; Friendly/Hostile toggle
-~e Up::RBHRMB().RMBRefresh()   ; primary use/action
-~f Up::RBHRMB().RMBRefresh()   ; secondary use/action
+~*1::RBHRMB().RMBRefresh()   ; hotbar weapons and tools
+~*2::RBHRMB().RMBRefresh()
+~*3::RBHRMB().RMBRefresh()
+~*4::RBHRMB().RMBRefresh()
+~*5::RBHRMB().RMBRefresh()
+~*6::RBHRMB().RMBRefresh()
+~*7::RBHRMB().RMBForceOff()  ; for sheriff baton
+~*8::RBHRMB().RMBForceOff()  ; for sheriff cuffs
+~*v::RBHRMB().RMBRefresh()   ; first/third person switch
+~*b::RBHRMB().RMBForceOff()  ; backpack window
+~*m::RBHRMB().RMBForceOff()  ; map window
+~*Tab::RBHRMB().RMBForceOff()  ; all-around window
+~*t::RBHRMB().RMBForceOff()  ; character customization window
+~*h::RBHRMB().RMBForceOff()  ; Pick A Horse window
+~*k::RBHRMB().RMBForceOff()  ; Skills window
+~*l::RBHRMB().RMBForceOff()  ; Quests window
+~*p::RBHRMB().RMBRefresh()   ; Friendly/Hostile toggle
+~*e Up::RBHRMB().RMBRefresh()   ; primary use/action
+~*f Up::RBHRMB().RMBRefresh()   ; primary use/action
+;~*f::RBHRMB().RMBSuspSwitch(True)   ; secondary use/action
+;~*f Up::RBHRMB().RMBSuspSwitch(False)   ; secondary use/action
         ; The above two are complicated because they don't always pop up a UX
         ; dialog. When they *do* (talking to shopkeepers, opening a chest, et
         ; cetera) we'd prefer ForceOff, and when they *don't* (picking up a
@@ -195,19 +198,20 @@ RBHRMB_Exit() {
         ; CORRECTION: I'm having it refresh, and turning things off manually.
         ; CORRECTION 2: Having them only refresh on keyup (not down) because
         ; otherwise some robbery-related actions Don't Work.
-~/::RBHRMB().RMBChatSwitch(True)    ; send a message
-~Esc::{ ; EITHER Roblox menu OR cancel chat
+~*/::RBHRMB().RMBSuspSwitch(True)    ; send a message
+~*Esc::{ ; EITHER Roblox menu OR cancel chat
     ; forceoff first as it'll work outside of chat mode
     ; otherwise, just end chat mode
     RBHRMB().RMBForceOff()
-    RBHRMB().RMBChatSwitch(False)
+    RBHRMB().RMBSuspSwitch(False)
 }
-~Enter::RBHRMB().RMBChatSwitch(False)   ; Chat Send
-F13::RBHRMB().RMBToggle()     ; primary toggle key
+~*Enter::RBHRMB().RMBSuspSwitch(False)   ; Susp Send
+*F13::RBHRMB().RMBToggle()     ; primary toggle key
 `::{    ; "master reset and rehold" key
     RBHRMB_Exit()
     RBHRMB().RMBToggle()
 }
 Del::RBHRMB_Exit()  ; "bail out" key
+$F15::F9
 #HotIf
 F14::Reload ; in case the "can't click on anything else" bug recurs
