@@ -25,8 +25,9 @@ HomeDir := EnvGet("USERPROFILE")
 ; Keep NSNetMon on top of the taskbar (but not anything *covering* the taskbar)
 ; Uses WinMoveTop because it's *already* always-on-top, but so is the taskbar
 GroupAdd("OverTaskbar", "NSnetmon ahk_class NSnetmon ahk_exe netmon.exe")
+GroupAdd("OverTaskbar", "FloatingForm ahk_class WindowsForms10.Window.8.app.0.297b065_r48_ad1 ahk_exe explorer.exe")
 rise_above_taskbar() {
-    If IsWindowNotOverlapped(WinExist('ahk_class Shell_TrayWnd')) {
+    If IsWindowNotOverlapped(WinExist("ahk_class Shell_TrayWnd")) {
         TargetWindows := WinGetList("ahk_group OverTaskbar")
         For targetwindow In TargetWindows {
             WinSetAlwaysOnTop(1, targetwindow)
@@ -43,14 +44,14 @@ rise_above_taskbar() {
 ; Taken from https://www.autohotkey.com/boards/viewtopic.php?t=121402
 IsWindowNotOverlapped(hWnd) {
     RECT1 := Buffer(16), RECT2 := Buffer(16), RECT3 := Buffer(16)
-    DllCall('GetWindowRect', 'Ptr', hWnd, 'Ptr', RECT1)
+    DllCall("GetWindowRect", "Ptr", hWnd, "Ptr", RECT1)
     for wnd in WinGetList() {
         if wnd = hWnd {
             break
         }
-        DllCall('GetWindowRect', 'Ptr', wnd, 'Ptr', RECT2)
-        DllCall('IntersectRect', 'Ptr', RECT3, 'Ptr', RECT1, 'Ptr', RECT2)
-        if DllCall('EqualRect', 'Ptr', RECT1, 'Ptr', RECT3) {
+        DllCall("GetWindowRect", "Ptr", wnd, "Ptr", RECT2)
+        DllCall("IntersectRect", "Ptr", RECT3, "Ptr", RECT1, "Ptr", RECT2)
+        if DllCall("EqualRect", "Ptr", RECT1, "Ptr", RECT3) {
             return false
         }
     }
@@ -66,7 +67,7 @@ IsWindowNotOverlapped(hWnd) {
 ; gone with a truncated version.
 GroupAdd("TopNotif", "New notification ahk_class Windows.UI.Core.CoreWindow")
         ; Notifications
-GroupAdd("TopNotif", "ahk_class XamlExplorerHostIslandWindow")
+;GroupAdd("TopNotif", "ahk_class XamlExplorerHostIslandWindow")
         ; Desktop indicator popups
 GroupAdd("TopNotif",
         "notificationtoasts ahk_class SDL_app ahk_exe steamwebhelper.exe")
@@ -77,7 +78,8 @@ flip_to_top() {
         WinGetPos(, &OrigY,, &Height, TargetWindow)
         If ((OrigY > (A_ScreenHeight / 2)) && (Height > 100)) {
             ; 53 is the height of a not-yet-opened new notification; this is a
-            ; bug workaround. (Changed to 86 when I moved to higher res)
+            ; bug workaround. (Changed to 86 when I moved to higher res, then
+            ; changed again to 100 when that didn't get all cases)
             ; 50 is the Officially Determined Height of a taskbar in Win11;
             ; this is a workaround when using StartAllBack. (Changed to 80 when
             ; I moved to higher res)
@@ -88,25 +90,36 @@ flip_to_top() {
 
 ; Timer for both of the above.
 WindowsManage() {
-    flip_to_top()
+    ;flip_to_top()
     rise_above_taskbar()
     
     ; The below is a quick-and-dirty way of fixing positioning issues with the
     ; Notification Center (it'll sometimes appear entirely offscreen)
     ; I suspect StartAllBack is responsible but can't be certain.
-    NotifCenter := WinExist("Notification Center ahk_class Windows.UI.Core.CoreWindow")
-    If NotifCenter {
-        WinGetPos(,, &NotWidth,, NotifCenter)
-        WinMove(Abs(A_ScreenWidth - NotWidth),80,,, NotifCenter)
-    }
+    ;NotifCenter := WinExist("Notification Center ahk_class Windows.UI.Core.CoreWindow")
+    ;If NotifCenter {
+    ;    WinGetPos(,, &NotWidth,, NotifCenter)
+    ;    WinMove(Abs(A_ScreenWidth - NotWidth),80,,, NotifCenter)
+    ;}
 }
-SetTimer(WindowsManage, 10)
+SetTimer(WindowsManage, 1000)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Desktop Switching ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 #Include "VD\VD.ah2"
+MoveDesktopNotification() {
+    ; For desktop indicator popups...
+    TargetWindow := WinWait("ahk_class XamlExplorerHostIslandWindow",,1)
+    If TargetWindow {
+        WinGetPos(, &OrigY,, &Height, TargetWindow)
+        WinMove(,Abs(Height),,, TargetWindow)
+        ;MsgBox "Moved"
+    ;} Else {
+    ;    MsgBox "Timed out"
+    }
+} 
 ChangeDesktopDisplayStatus(prevnum, num:=1) {
     A_IconTip := VD.getNameFromDesktopNum(num)
     try {
@@ -115,14 +128,12 @@ ChangeDesktopDisplayStatus(prevnum, num:=1) {
         ; if no such icon file is provided
         TraySetIcon(A_ScriptDir "/icons/+.ico")
     }
-}
-MoveWindowToDesktopNum(num:=1) {
-    VD.MoveWindowToDesktopNum("A",num)
-    VD.goToDesktopNum(num)
+    SetTimer(MoveDesktopNotification,-100)
 }
 ; set initial display status on launch
 ChangeDesktopDisplayStatus(0,VD.getCurrentDesktopNum())
 VD.RegisterDesktopNotifications()
+VD.animation_on := true
 VD.DefineProp("CurrentVirtualDesktopChanged", {Call:ChangeDesktopDisplayStatus})
 ; These are a roundabout way of implementing function key shortcuts for desktop
 ; switching.
@@ -130,10 +141,10 @@ F1::VD.goToDesktopNum(1)
 F2::VD.goToDesktopNum(2)
 F3::VD.goToDesktopNum(3)
 F4::VD.goToDesktopNum(4)
-+F1::MoveWindowToDesktopNum(1)
-+F2::MoveWindowToDesktopNum(2)
-+F3::MoveWindowToDesktopNum(3)
-+F4::MoveWindowToDesktopNum(4)
++F1::VD.MoveWindowToDesktopNum("A",1,true)
++F2::VD.MoveWindowToDesktopNum("A",2,true)
++F3::VD.MoveWindowToDesktopNum("A",3,true)
++F4::VD.MoveWindowToDesktopNum("A",4,true)
 
 ; Desktop function key bypass (just in case)
 #F1::Send("{F1}")
@@ -221,11 +232,13 @@ terminal_invoke(termlaunchmode) {
         Case "gitbash": Run("wt -p `"Git Bash`"", HomeDir)
     }
 }
+#HotIf Not WinActive("ahk_exe Citrix.DesktopViewer.App.exe")
 F11::terminal_invoke("gitbash")
 +F11::terminal_invoke("tmux")
 ^+F11::terminal_invoke("reattach")
 ^F11::terminal_invoke("pwsh")
 ^#F11::terminal_invoke("cmd")
+#HotIf
 
 ; Contextual new terminal windows function
 ; NOTE: Dependent on my configuration elsewhere that sets window title strings
@@ -251,7 +264,9 @@ GroupAdd("TerminalWindows", "ahk_exe WindowsTerminal.exe")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Other Application Invocation Hotkeys ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-F10::Run("C:\Program Files\Vim\vim91\gvim.exe", HomeDir)
+#HotIf Not WinActive("ahk_exe Citrix.DesktopViewer.App.exe")
+F10::Run("C:\Program Files\Vim\gvim.exe", HomeDir)
+#HotIf
 #HotIf Not WinActive("ahk_exe Arcanum.exe")
 F9::Run("C:\WINDOWS\system32\calc.exe")
 #HotIf
@@ -434,6 +449,11 @@ GroupAdd("VerticalMaximizeDefault", "GVIM ahk_exe msrdc.exe")
 #HotIf WinActive("ahk_group VerticalMaximizeDefault")
 !F3::VMaximizeToggle("A")
 !+F3::MaximizeToggle("A")
+#HotIf
+; disable for Citrix
+#HotIf WinActive("ahk_exe Citrix.DesktopViewer.App.exe")
+!F3::Return
+!+F3::Return
 #HotIf
 
 
