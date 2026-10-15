@@ -25,7 +25,6 @@ HomeDir := EnvGet("USERPROFILE")
 ; Keep NSNetMon on top of the taskbar (but not anything *covering* the taskbar)
 ; Uses WinMoveTop because it's *already* always-on-top, but so is the taskbar
 GroupAdd("OverTaskbar", "NSnetmon ahk_class NSnetmon ahk_exe netmon.exe")
-GroupAdd("OverTaskbar", "FloatingForm ahk_class WindowsForms10.Window.8.app.0.297b065_r48_ad1 ahk_exe explorer.exe")
 rise_above_taskbar() {
     If IsWindowNotOverlapped(WinExist("ahk_class Shell_TrayWnd")) {
         TargetWindows := WinGetList("ahk_group OverTaskbar")
@@ -60,15 +59,12 @@ IsWindowNotOverlapped(hWnd) {
 
 
 ; Move notifications to the top of the screen rather than the bottom.
-; Needed for Windows core notifications, micro-popups (current desktop,
-; brightness meter, et cetera), and Steam notifications.
+; Needed for Windows core notifications and Steam notifications.
 ; NOTE: Actual window title for Steam is 'notificationtoasts_107_desktop' but
 ; that '107' makes me wary that it might change with future revisions, so I've
 ; gone with a truncated version.
 GroupAdd("TopNotif", "New notification ahk_class Windows.UI.Core.CoreWindow")
         ; Notifications
-;GroupAdd("TopNotif", "ahk_class XamlExplorerHostIslandWindow")
-        ; Desktop indicator popups
 GroupAdd("TopNotif",
         "notificationtoasts ahk_class SDL_app ahk_exe steamwebhelper.exe")
         ; Steam notifications
@@ -109,17 +105,6 @@ SetTimer(WindowsManage, 1000)
 ;;; Desktop Switching ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 #Include "VD\VD.ah2"
-MoveDesktopNotification() {
-    ; For desktop indicator popups...
-    TargetWindow := WinWait("ahk_class XamlExplorerHostIslandWindow",,1)
-    If TargetWindow {
-        WinGetPos(, &OrigY,, &Height, TargetWindow)
-        WinMove(,Abs(Height),,, TargetWindow)
-        ;MsgBox "Moved"
-    ;} Else {
-    ;    MsgBox "Timed out"
-    }
-} 
 ChangeDesktopDisplayStatus(prevnum, num:=1) {
     A_IconTip := VD.getNameFromDesktopNum(num)
     try {
@@ -128,7 +113,6 @@ ChangeDesktopDisplayStatus(prevnum, num:=1) {
         ; if no such icon file is provided
         TraySetIcon(A_ScriptDir "/icons/+.ico")
     }
-    SetTimer(MoveDesktopNotification,-100)
 }
 ; set initial display status on launch
 ChangeDesktopDisplayStatus(0,VD.getCurrentDesktopNum())
