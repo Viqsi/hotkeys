@@ -22,83 +22,9 @@ HomeDir := EnvGet("USERPROFILE")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Window Position Management ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Keep NSNetMon on top of the taskbar (but not anything *covering* the taskbar)
-; Uses WinMoveTop because it's *already* always-on-top, but so is the taskbar
-GroupAdd("OverTaskbar", "NSnetmon ahk_class NSnetmon ahk_exe netmon.exe")
-rise_above_taskbar() {
-    If IsWindowNotOverlapped(WinExist("ahk_class Shell_TrayWnd")) {
-        TargetWindows := WinGetList("ahk_group OverTaskbar")
-        For targetwindow In TargetWindows {
-            WinSetAlwaysOnTop(1, targetwindow)
-            WinMoveTop(targetwindow)
-        }
-    } Else {
-        TargetWindows := WinGetList("ahk_group OverTaskbar")
-        For targetwindow In TargetWindows {
-            WinMoveBottom(targetwindow)
-        }
-    }
-}
-; Used to check if a window is overlapped
-; Taken from https://www.autohotkey.com/boards/viewtopic.php?t=121402
-IsWindowNotOverlapped(hWnd) {
-    RECT1 := Buffer(16), RECT2 := Buffer(16), RECT3 := Buffer(16)
-    DllCall("GetWindowRect", "Ptr", hWnd, "Ptr", RECT1)
-    for wnd in WinGetList() {
-        if wnd = hWnd {
-            break
-        }
-        DllCall("GetWindowRect", "Ptr", wnd, "Ptr", RECT2)
-        DllCall("IntersectRect", "Ptr", RECT3, "Ptr", RECT1, "Ptr", RECT2)
-        if DllCall("EqualRect", "Ptr", RECT1, "Ptr", RECT3) {
-            return false
-        }
-    }
-    return true
-}
 
-
-; Move notifications to the top of the screen rather than the bottom.
-; Needed for Windows core notifications and Steam notifications.
-; NOTE: Actual window title for Steam is 'notificationtoasts_107_desktop' but
-; that '107' makes me wary that it might change with future revisions, so I've
-; gone with a truncated version.
-GroupAdd("TopNotif", "New notification ahk_class Windows.UI.Core.CoreWindow")
-        ; Notifications
-GroupAdd("TopNotif",
-        "notificationtoasts ahk_class SDL_app ahk_exe steamwebhelper.exe")
-        ; Steam notifications
-flip_to_top() {
-    TargetWindows := WinGetList("ahk_group TopNotif")
-    For TargetWindow In TargetWindows {
-        WinGetPos(, &OrigY,, &Height, TargetWindow)
-        If ((OrigY > (A_ScreenHeight / 2)) && (Height > 100)) {
-            ; 53 is the height of a not-yet-opened new notification; this is a
-            ; bug workaround. (Changed to 86 when I moved to higher res, then
-            ; changed again to 100 when that didn't get all cases)
-            ; 50 is the Officially Determined Height of a taskbar in Win11;
-            ; this is a workaround when using StartAllBack. (Changed to 80 when
-            ; I moved to higher res)
-            WinMove(,Abs(A_ScreenHeight - OrigY - Height + 80),,, TargetWindow)
-        }
-    }
-}
-
-; Timer for both of the above.
-WindowsManage() {
-    ;flip_to_top()
-    rise_above_taskbar()
-    
-    ; The below is a quick-and-dirty way of fixing positioning issues with the
-    ; Notification Center (it'll sometimes appear entirely offscreen)
-    ; I suspect StartAllBack is responsible but can't be certain.
-    ;NotifCenter := WinExist("Notification Center ahk_class Windows.UI.Core.CoreWindow")
-    ;If NotifCenter {
-    ;    WinGetPos(,, &NotWidth,, NotifCenter)
-    ;    WinMove(Abs(A_ScreenWidth - NotWidth),80,,, NotifCenter)
-    ;}
-}
-SetTimer(WindowsManage, 1000)
+; The fb2k hud window has a distressing tendency to start in the wrong place (but afterwards it doesn't move)
+WinMove(2469, 2, , , "JScript Panel 3 ahk_class {EA622005-1140-4EF1-B64D-4A215DB3526A} ahk_exe foobar2000.exe")
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -480,6 +406,5 @@ ExplicitResize() {
     WinMove(, , wW, wH, "ahk_id " Active_ID)
 }
 ^=::ExplicitResize()
-
 
 #Include "TWW.ah2"
